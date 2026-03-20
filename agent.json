@@ -1,0 +1,30 @@
+{
+  "id": "short-video-replicator",
+  "name": "短视频复刻助手",
+  "description": "一键分析爆款短视频文案：自动下载、转录、三维度拆解、AI 去味二创，支持抖音/B站/YouTube。",
+  "model": "{YOUR_MODEL_ID}",
+  "os": [],
+  "skills": ["video-copy-analyzer"],
+  "tools": { "allow": ["group:subagent"] },
+  "formData": {
+    "fields": [
+      {
+        "key": "transcribe_api_key",
+        "label": "转录 API Key",
+        "type": "password",
+        "required": false,
+        "placeholder": "sk-...",
+        "description": "用于语音转录的 OpenAI 兼容 API Key（支持 Whisper 等）。仅处理音视频内容时需要，留空则平台运行时自动识别。"
+      },
+      {
+        "key": "transcribe_base_url",
+        "label": "转录 API Base URL",
+        "type": "text",
+        "required": false,
+        "placeholder": "https://api.openai.com/v1",
+        "description": "转录 API 端点，留空默认使用 OpenAI。如使用其他兼容服务请填写对应地址。"
+      }
+    ],
+    "target": ".secrets/transcribe-config.json"
+  }
+}
