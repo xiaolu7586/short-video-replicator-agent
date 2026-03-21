@@ -49,34 +49,66 @@ def _load_from_env() -> dict | None:
 
 
 def _load_from_openclaw() -> dict | None:
-    """从 ~/.openclaw/ 运行时读取凭据（OpenClaw 兼容平台）"""
-    userinfo_path = OPENCLAW_HOME / "identity" / "openclaw-userinfo.json"
+    """从 ~/.openclaw/ 运行时读取凭据（OpenClaw 兼容平台）
+
+    子优先级（从高到低）：
+      A. openclaw.json 中 provider 的 apiKey 字段 → Bearer 鉴权
+      B. openclaw.json 中 provider 的 headers 对象（如 x-api-key）→ 透传 header
+      C. ~/.openclaw/identity/openclaw-userinfo.json 的 uid/token → X-Auth-* 鉴权
+    """
     config_path = OPENCLAW_HOME / "openclaw.json"
-    if not userinfo_path.exists():
+    userinfo_path = OPENCLAW_HOME / "identity" / "openclaw-userinfo.json"
+
+    if not config_path.exists():
         return None
-    try:
-        identity = json.loads(userinfo_path.read_text())
-        uid_key = next(k for k in identity if re.search(r'uid', k, re.I))
-        token_key = next(k for k in identity if re.search(r'token', k, re.I))
-        uid, token = identity[uid_key], identity[token_key]
-    except Exception:
-        return None
+
+    base_url = None
+    api_key = None
+    extra_headers: dict = {}
+
     try:
         cfg = json.loads(config_path.read_text())
         providers = cfg.get("models", {}).get("providers", {})
-        base_url = None
         for provider in providers.values():
             for k, v in provider.items():
                 if re.search(r'base.?url', k, re.I) and isinstance(v, str) and v.startswith("http"):
                     base_url = v.rstrip("/")
                     break
             if base_url:
+                raw_key = provider.get("apiKey", "")
+                if isinstance(raw_key, str):
+                    api_key = raw_key.strip()
+                headers_obj = provider.get("headers", {})
+                if isinstance(headers_obj, dict):
+                    extra_headers = {hk: hv for hk, hv in headers_obj.items()
+                                     if isinstance(hv, str) and hv.strip()}
                 break
     except Exception:
-        base_url = None
+        return None
+
     if not base_url:
         return None
-    return {"mode": "openclaw", "uid": uid, "token": token, "base_url": base_url}
+
+    # 子优先级 A：provider apiKey → Bearer
+    if api_key:
+        return {"mode": "apikey", "api_key": api_key, "base_url": base_url}
+
+    # 子优先级 B：provider headers（如 x-api-key）
+    if extra_headers:
+        return {"mode": "headers", "extra_headers": extra_headers, "base_url": base_url}
+
+    # 子优先级 C：userinfo uid/token → X-Auth-*
+    if userinfo_path.exists():
+        try:
+            identity = json.loads(userinfo_path.read_text())
+            uid_key = next(k for k in identity if re.search(r'uid', k, re.I))
+            token_key = next(k for k in identity if re.search(r'token', k, re.I))
+            uid, token = identity[uid_key], identity[token_key]
+            return {"mode": "openclaw", "uid": uid, "token": token, "base_url": base_url}
+        except Exception:
+            pass
+
+    return None
 
 
 def load_config() -> dict:
@@ -132,6 +164,11 @@ def transcribe_audio(audio_path: Path, config: dict) -> dict:
         headers = {
             "Content-Type": f"multipart/form-data; boundary={boundary}",
             "Authorization": f"Bearer {config['api_key']}"
+        }
+    elif config["mode"] == "headers":
+        headers = {
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+            **config["extra_headers"]
         }
     else:  # openclaw
         headers = {
