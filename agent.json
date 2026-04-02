@@ -28,23 +28,15 @@
   "formData": {
     "fields": [
       {
-        "key": "video_transcript_api_key",
-        "label": "Video Transcript API Key",
+        "key": "youtube_transcript_api_key",
+        "label": "YouTube Transcript API Key",
         "type": "password",
         "required": false,
-        "placeholder": "bib-...",
-        "description": "API key for Bilibili/YouTube transcript service (no video download needed). Supports BibiGPT (https://bibigpt.co/user/integration) or any compatible provider."
-      },
-      {
-        "key": "video_transcript_base_url",
-        "label": "Video Transcript API Base URL",
-        "type": "text",
-        "required": false,
-        "placeholder": "https://api.bibigpt.co/api/v1",
-        "description": "API endpoint base URL. Leave blank to use BibiGPT (default). Fill in if using a compatible third-party service."
+        "placeholder": "sk-...",
+        "description": "Required for YouTube video analysis. Get a free key (100 requests/month) at: https://transcriptapi.com"
       }
     ],
-    "target": ".secrets/video-transcript-config.json"
+    "target": ".secrets/youtube-transcript-config.json"
   },
   "featured": false,
   "trust_level": "community",
