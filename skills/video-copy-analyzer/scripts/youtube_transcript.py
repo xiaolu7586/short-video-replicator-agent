@@ -68,7 +68,10 @@ def fetch_transcript(video_url: str) -> list:
     params = urllib.parse.urlencode({"video_url": video_url})
     req = urllib.request.Request(
         f"{API_BASE}/youtube/transcript?{params}",
-        headers={"Authorization": f"Bearer {api_key}"},
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        },
         method="GET",
     )
 
