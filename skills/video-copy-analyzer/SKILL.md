@@ -36,6 +36,30 @@ python scripts/check_environment.py  # verify setup
 
 ---
 
+## Agent behavior rules
+
+> These rules override default LLM behavior. Follow them exactly.
+
+**RULE 1 — Credential check before running:**
+Before calling `main.py` for any video URL, check whether the required credential exists:
+- YouTube URL → check if `.secrets/youtube-transcript-config.json` exists and contains a non-empty `youtube_transcript_api_key`
+- TikTok / Douyin / local file → check if `.secrets/transcribe-config.json` exists and contains a non-empty `transcribe_api_key`
+
+If the credential file is missing or the key is empty, **do NOT run main.py**. Instead, immediately tell the user:
+
+> "To analyze YouTube videos, you need a free API key from [transcriptapi.com](https://transcriptapi.com) (100 requests/month free).
+> Please go to **Agent Settings → Credentials** and fill in your `youtube_transcript_api_key`, then try again."
+
+(Adjust the message for the relevant platform and credential.)
+
+**RULE 2 — Never improvise on script errors:**
+If `main.py` exits with a non-zero code, read its stderr/stdout output and relay the exact error message to the user. **Do not attempt alternative methods** (e.g., yt-dlp download, browser fetch, manual transcription). The script handles all supported paths; anything outside it is unsupported.
+
+**RULE 3 — No silent fallbacks:**
+If a platform is unsupported or a credential is missing, tell the user clearly and stop. Do not silently switch to a different approach.
+
+---
+
 ## Workflow
 
 ```mermaid
