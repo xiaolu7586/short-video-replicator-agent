@@ -2,6 +2,10 @@
 """
 视频文案分析工具 - 主入口
 用法: python main.py <视频URL或分享文本或文件路径> [输出目录]
+
+凭证（可选，用于 Bilibili/YouTube 直接转录，无需下载视频）:
+  VIDEO_TRANSCRIPT_API_KEY — 视频转录服务 API Key（支持 BibiGPT 或兼容服务）
+  VIDEO_TRANSCRIPT_BASE_URL — 自定义 API 地址（留空默认使用 BibiGPT）
 """
 
 import os
@@ -20,9 +24,18 @@ try:
 except ImportError:
     extract_video_url_from_text = None
 
+try:
+    from scripts.bibigpt_api import has_api_token as _has_bibi_token
+except ImportError:
+    _has_bibi_token = lambda: False
+
 
 def is_url(path: str) -> bool:
     return path.startswith(("http://", "https://", "BV"))
+
+
+def is_bilibili_or_youtube(url: str) -> bool:
+    return any(x in url for x in ("bilibili.com", "youtube.com", "youtu.be")) or url.startswith("BV")
 
 
 def report_stage(stage: int, name: str, file: Path = None, status: str = None):
@@ -72,35 +85,67 @@ def main():
 
     start_time = datetime.now()
 
-    # 阶段1: 下载视频
-    if is_url(url):
+    use_bibigpt = is_url(url) and is_bilibili_or_youtube(url) and _has_bibi_token()
+
+    if use_bibigpt:
+        # BibiGPT 路径: 直接 API 获取转录，跳过视频下载和本地音频转录
+        from scripts.bibigpt_api import fetch_transcript, write_srt_from_text
+
+        video_id = extract_video_id(url)
+        srt_path = output_dir / f"{video_id}.srt"
+
+        print("🌐 检测到 Bilibili/YouTube 链接，通过 BibiGPT API 获取转录...")
+        text = fetch_transcript(url)
+        write_srt_from_text(text, srt_path)
+        report_stage(1, "BibiGPT 转录", srt_path, f"{len(text)} 字符")
+
+        video_stem = video_id
+        video_source = url
+
+    elif is_url(url):
+        # 原有路径: 下载视频 → 本地音频转录
+        if is_bilibili_or_youtube(url) and not _has_bibi_token():
+            print("⚠️  Bilibili/YouTube 链接建议配置 Video Transcript API Key 以避免平台限制")
+            print("   请在 Agent 设置 → 凭证 中填入（支持 BibiGPT 或兼容服务）")
+            print("   将尝试直接下载（可能因平台风控失败）...\n")
+
         video_path = download_video(url, output_dir)
         video_source = url
+        size_mb = video_path.stat().st_size / 1024 / 1024
+        report_stage(1, "下载视频", video_path, f"{size_mb:.1f}MB")
+
+        srt_path = output_dir / f"{video_path.stem}.srt"
+        transcribe_video(video_path, srt_path)
+        segment_count = sum(1 for line in open(srt_path, "r", encoding="utf-8") if line.strip().isdigit())
+        report_stage(2, "语音转录", srt_path, f"{segment_count} 片段")
+
+        video_stem = video_path.stem
+
     else:
+        # 本地文件路径
         video_path = Path(url)
         if not video_path.exists():
             print(f"❌ 文件不存在: {video_path}")
             sys.exit(1)
         video_source = str(video_path)
+        size_mb = video_path.stat().st_size / 1024 / 1024
+        report_stage(1, "本地文件", video_path, f"{size_mb:.1f}MB")
 
-    size_mb = video_path.stat().st_size / 1024 / 1024
-    report_stage(1, "下载视频", video_path, f"{size_mb:.1f}MB")
+        srt_path = output_dir / f"{video_path.stem}.srt"
+        transcribe_video(video_path, srt_path)
+        segment_count = sum(1 for line in open(srt_path, "r", encoding="utf-8") if line.strip().isdigit())
+        report_stage(2, "语音转录", srt_path, f"{segment_count} 片段")
 
-    # 阶段2: 语音转录
-    srt_path = output_dir / f"{video_path.stem}.srt"
-    transcribe_video(video_path, srt_path)
-
-    segment_count = sum(1 for line in open(srt_path, "r", encoding="utf-8") if line.strip().isdigit())
-    report_stage(2, "语音转录", srt_path, f"{segment_count} 片段")
+        video_stem = video_path.stem
 
     # 阶段3: 生成文字稿
     transcript_path = generate_transcript(srt_path, output_dir, video_source)
 
     with open(transcript_path, "r", encoding="utf-8") as f:
-        text = f.read()
-        if "## Full Transcript" in text:
-            text = text.split("## Full Transcript")[1].strip()
-    report_stage(3, "生成文字稿", transcript_path, f"{len(text)} 字符")
+        content = f.read()
+        if "## Full Transcript" in content:
+            content = content.split("## Full Transcript")[1].strip()
+    report_stage(3, "生成文字稿", transcript_path, f"{len(content)} 字符")
 
     # 完成
     duration = (datetime.now() - start_time).total_seconds()
@@ -112,14 +157,15 @@ def main():
     print(f"📁 目录: {output_dir}\n")
 
     print("📄 生成文件:")
-    print(f"   • {video_path.name}")
+    if not use_bibigpt:
+        print(f"   • {video_stem}.mp4")
     print(f"   • {srt_path.name}")
     print(f"   • {transcript_path.name}")
 
     print("\n🤖 Agent Next Step:")
     print("   Read analysis framework from prompt/")
     print("   Call LLM to generate de-ai-fied analysis report")
-    print(f"   Output: {output_dir}/{video_path.stem}_analysis.md")
+    print(f"   Output: {output_dir}/{video_stem}_analysis.md")
 
 
 if __name__ == "__main__":

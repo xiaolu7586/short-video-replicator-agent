@@ -1,30 +1,53 @@
 {
-  "id": "short-video-replicator",
-  "name": "短视频复刻助手",
-  "description": "一键分析爆款短视频文案：自动下载、转录、三维度拆解、AI 去味二创，支持抖音/B站/YouTube。",
-  "model": "{YOUR_MODEL_ID}",
-  "os": [],
-  "skills": ["video-copy-analyzer"],
-  "tools": { "allow": ["group:subagent"] },
+  "version": 1,
+  "name": "Short Video Replicator",
+  "emoji": "🎬",
+  "description": "Analyze and replicate viral short videos with one click: auto-download, transcribe, 3-dimension breakdown, and AI-powered rewrite. Supports TikTok, Bilibili, and YouTube.",
+  "headline": "Analyze and replicate viral short videos from TikTok, Bilibili, and YouTube",
+  "category": "marketing",
+  "author": "xiaolu7586",
+  "tags": [
+    "video",
+    "tiktok",
+    "content",
+    "replication",
+    "viral"
+  ],
+  "model": "claude-sonnet-4-6",
+  "skills": {
+    "inline": [
+      "video-copy-analyzer"
+    ]
+  },
+  "suggested_prompts": [
+    "Analyze this TikTok video and break down why it went viral",
+    "Download and transcribe this Bilibili video",
+    "Rewrite this video script with a different angle",
+    "Find trending video formats I can replicate"
+  ],
   "formData": {
     "fields": [
       {
-        "key": "transcribe_api_key",
-        "label": "转录 API Key",
+        "key": "video_transcript_api_key",
+        "label": "Video Transcript API Key",
         "type": "password",
         "required": false,
-        "placeholder": "sk-...",
-        "description": "用于语音转录的 OpenAI 兼容 API Key（支持 Whisper 等）。仅处理音视频内容时需要，留空则平台运行时自动识别。"
+        "placeholder": "bib-...",
+        "description": "API key for Bilibili/YouTube transcript service (no video download needed). Supports BibiGPT (https://bibigpt.co/user/integration) or any compatible provider."
       },
       {
-        "key": "transcribe_base_url",
-        "label": "转录 API Base URL",
+        "key": "video_transcript_base_url",
+        "label": "Video Transcript API Base URL",
         "type": "text",
         "required": false,
-        "placeholder": "https://api.openai.com/v1",
-        "description": "转录 API 端点，留空默认使用 OpenAI。如使用其他兼容服务请填写对应地址。"
+        "placeholder": "https://api.bibigpt.co/api/v1",
+        "description": "API endpoint base URL. Leave blank to use BibiGPT (default). Fill in if using a compatible third-party service."
       }
     ],
-    "target": ".secrets/transcribe-config.json"
-  }
+    "target": ".secrets/video-transcript-config.json"
+  },
+  "featured": false,
+  "trust_level": "community",
+  "languages": [],
+  "avatar_url": "https://assets.clawdi.ai/assets/short-video-replicator-agent.jpg"
 }
