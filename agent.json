@@ -32,11 +32,20 @@
         "label": "YouTube Transcript API Key",
         "type": "password",
         "required": false,
+        "placeholder": "ta-...",
+        "description": "Required for YouTube video analysis. Get a free key (100 requests/month) at: https://transcriptapi.com",
+        "target": ".secrets/youtube-transcript-config.json"
+      },
+      {
+        "key": "transcribe_api_key",
+        "label": "Audio Transcription API Key (OpenAI)",
+        "type": "password",
+        "required": false,
         "placeholder": "sk-...",
-        "description": "Required for YouTube video analysis. Get a free key (100 requests/month) at: https://transcriptapi.com"
+        "description": "Required for TikTok/Douyin and local video files. Use your OpenAI API key (whisper-1 / gpt-4o-mini-transcribe). Get one at: https://platform.openai.com/api-keys",
+        "target": ".secrets/transcribe-config.json"
       }
-    ],
-    "target": ".secrets/youtube-transcript-config.json"
+    ]
   },
   "featured": false,
   "trust_level": "community",

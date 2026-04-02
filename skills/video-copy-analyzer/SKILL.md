@@ -21,9 +21,9 @@ Supports YouTube, Bilibili, TikTok/Douyin, and local video files.
 | Credential | Platform | Required | Get it |
 |---|---|---|---|
 | `youtube_transcript_api_key` | YouTube | Yes (for YouTube) | [transcriptapi.com](https://transcriptapi.com) — free 100 req/month |
+| `transcribe_api_key` | TikTok / Douyin / Local files | Yes (for these platforms) | [OpenAI API key](https://platform.openai.com/api-keys) — uses `whisper-1` / `gpt-4o-mini-transcribe` |
 
 **Bilibili:** No extra credential needed — just make sure Chrome is logged in to bilibili.com
-**TikTok / Local files:** No credentials needed
 
 ---
 
@@ -121,4 +121,7 @@ Follow `prompt/copywriting-recreate.md` + `prompt/de-ai-guide.md`.
 | No transcript found (YouTube) | Video has no captions | Try a different video with CC enabled |
 | B站 cookie not found | Not logged in to Bilibili in Chrome | Log in at bilibili.com in Chrome and retry |
 | B站 no subtitle | Video has no AI subtitle | Only videos with AI subtitles are supported |
+| `未找到转录 API 配置` | Missing transcription key | Add `transcribe_api_key` (OpenAI key) in Agent Settings → Credentials |
+| Transcription API 401 | Invalid OpenAI key | Check your key at platform.openai.com |
+| `ffmpeg: command not found` | ffmpeg not installed | Run `brew install ffmpeg` (macOS) |
 | Link expired / invalid | Video deleted | Verify the URL is valid |
