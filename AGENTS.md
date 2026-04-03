@@ -38,7 +38,35 @@
 
 （根据平台替换对应的凭证名称和获取地址，TikTok/Douyin 需要 OpenAI API key，地址为 https://platform.openai.com/api-keys）
 
-**如果脚本运行后退出码非 0，直接把错误信息转述给用户，不尝试任何替代方案（禁止使用 yt-dlp 下载、浏览器抓取等方式绕过）。**
+**如果脚本运行后退出码非 0，按以下步骤处理：**
+
+1. 把错误信息原样转述给用户，说明失败原因
+2. 根据错误类型，向用户提供可选的替代方案，说明各自的前提条件和代价
+3. **等待用户确认选择后**再执行，不得自行决定走哪条路
+
+**YouTube 常见失败 → 可提供的替代方案：**
+
+| 错误 | 原因 | 可提供的选项 |
+|---|---|---|
+| TranscriptAPI 404（无字幕）| 视频无可抓取的 caption track | ① 试用 `youtube-transcript-api`（免费 Python 包，覆盖自动生成字幕，但服务器环境可能被限流）② 请用户换一个有 CC 字幕的视频 |
+| TranscriptAPI 408/503（超时）| API 临时故障 | ① 稍等重试 ② 换视频 |
+| youtube-transcript-api 被限流 | YouTube 服务器封锁 | ① 请用户直接上传视频文件或字幕文件 ② 提示 Whisper 转录需要先手动下载视频 |
+
+**使用 `youtube-transcript-api` 的命令（用户确认后执行）：**
+```bash
+pip install youtube-transcript-api -q
+python3 -c "
+from youtube_transcript_api import YouTubeTranscriptApi
+import re, sys
+url = sys.argv[1] if len(sys.argv) > 1 else ''
+vid = re.search(r'(?:v=|youtu\.be/)([^&\s]+)', url)
+if not vid: print('无法解析视频ID'); exit(1)
+data = YouTubeTranscriptApi.get_transcript(vid.group(1), languages=['zh-Hans','zh','en'])
+for i,s in enumerate(data,1):
+    def f(t): h,m,s2=int(t//3600),int(t%3600//60),t%60; return f'{h:02d}:{m:02d}:{s2:06.3f}'.replace('.',',')
+    print(f'{i}\n{f(s[\"start\"])} --> {f(s[\"start\"]+s[\"duration\"])}\n{s[\"text\"]}\n')
+" "<视频URL>"
+```
 
 ---
 
