@@ -47,7 +47,7 @@
 **Step 1** — 运行脚本：
 
 ```bash
-python skills/video-copy-analyzer/main.py "<视频URL或文件路径>"
+python3 skills/video-copy-analyzer/main.py "<视频URL或文件路径>"
 ```
 
 生成：`canvas/{video_id}_transcript.md`、`canvas/{video_id}_structured.md`
