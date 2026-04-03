@@ -13,12 +13,15 @@ Get your API key: https://transcriptapi.com
 import os
 import sys
 import json
+import time
 import urllib.request
 import urllib.error
 import urllib.parse
 from pathlib import Path
 
 API_BASE = "https://transcriptapi.com/api/v2"
+MAX_RETRIES = 3
+RETRY_DELAY = 5  # seconds
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 WORKSPACE_ROOT = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "..", ".."))
@@ -75,22 +78,38 @@ def fetch_transcript(video_url: str) -> list:
         method="GET",
     )
 
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="replace")
-        if e.code == 401:
-            raise RuntimeError("API key invalid — please check your TranscriptAPI key")
-        if e.code == 402:
-            raise RuntimeError("TranscriptAPI quota exceeded — check your plan at transcriptapi.com")
-        if e.code == 404:
-            raise RuntimeError("No transcript found for this video (may have no captions)")
-        if e.code == 429:
-            raise RuntimeError("Rate limited — please retry in a moment")
-        raise RuntimeError(f"TranscriptAPI error {e.code}: {body}")
-    except urllib.error.URLError as e:
-        raise RuntimeError(f"Network error reaching TranscriptAPI: {e.reason}")
+    data = None
+    last_error = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            break  # success
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", errors="replace")
+            if e.code == 401:
+                raise RuntimeError("API key invalid — please check your TranscriptAPI key")
+            if e.code == 402:
+                raise RuntimeError("TranscriptAPI quota exceeded — check your plan at transcriptapi.com")
+            if e.code == 404:
+                raise RuntimeError("No transcript found for this video (may have no captions)")
+            if e.code in (408, 429, 503):
+                # Retryable errors
+                last_error = RuntimeError(f"TranscriptAPI error {e.code}: {body}")
+                if attempt < MAX_RETRIES:
+                    print(f"   ⏳ TranscriptAPI returned {e.code}, retrying ({attempt}/{MAX_RETRIES})...")
+                    time.sleep(RETRY_DELAY)
+                    continue
+            raise RuntimeError(f"TranscriptAPI error {e.code}: {body}")
+        except urllib.error.URLError as e:
+            last_error = RuntimeError(f"Network error reaching TranscriptAPI: {e.reason}")
+            if attempt < MAX_RETRIES:
+                print(f"   ⏳ Network error, retrying ({attempt}/{MAX_RETRIES})...")
+                time.sleep(RETRY_DELAY)
+                continue
+
+    if data is None:
+        raise last_error
 
     segments = data.get("transcript", [])
     if not segments:
